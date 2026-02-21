@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
   src/main.cpp
+  src/common/config.cpp
   src/concurrency/rw_lock.cpp
   src/concurrency/thread_pool.cpp
   src/metrics/exporter.cpp

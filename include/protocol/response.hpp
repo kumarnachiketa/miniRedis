@@ -9,6 +9,7 @@ public:
     static std::string error(const std::string&);
     static std::string bulk(const std::string&);
     static std::string null();
+    static std::string integer(int64_t value);
 };
 
 }

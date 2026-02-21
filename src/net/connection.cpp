@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <errno.h>
+#include <cstdlib>
+#include <cstdint>
 
 namespace net {
 
@@ -39,16 +41,7 @@ bool Connection::handle_read() {
     if (n > 0) {
         read_buffer_.append(buffer, n);
 
-        std::cout << "Read "
-                  << n
-                  << " bytes\n";
-
-        process_buffer();
-        for (char c : read_buffer_) {
-            if (c == '\r') std::cout << "\\r";
-            else if (c == '\n') std::cout << "\\n\n";
-            else std::cout << c;
-        }
+            process_buffer();
 
         return true;
     }
@@ -79,10 +72,8 @@ bool Connection::process_buffer() {
 
         std::vector<std::string> cmd;
 
-        if (!parser_.parse_array(read_buffer_, pos, cmd)) {
-            std::cout<<"line 77"<<std::endl;
+        if (!parser_.parse_array(read_buffer_, pos, cmd))
             break;   // need more data
-        }
 
         if (cmd.empty())
             continue;
@@ -105,15 +96,38 @@ bool Connection::process_buffer() {
 
         /* ---------- GET ---------- */
         else if (op == "GET" && cmd.size() >= 2) {
-
             std::string value;
-
             if (!storage_.get(cmd[1], value))
-                response =
-                    protocol::RespResponse::null();
+                response = protocol::RespResponse::null();
             else
-                response =
-                    protocol::RespResponse::bulk(value);
+                response = protocol::RespResponse::bulk(value);
+        }
+
+        /* ---------- SETEX ---------- */
+        else if (op == "SETEX" && cmd.size() >= 4) {
+            uint64_t ttl = 0;
+            bool valid = true;
+            try {
+                ttl = static_cast<uint64_t>(std::stoull(cmd[2]));
+            } catch (...) {
+                valid = false;
+            }
+            if (!valid)
+                response = protocol::RespResponse::error("invalid expire time");
+            else {
+                storage_.set_with_ttl(cmd[1], cmd[3], ttl);
+                response = protocol::RespResponse::ok();
+            }
+        }
+
+        /* ---------- DEL ---------- */
+        else if (op == "DEL" && cmd.size() >= 2) {
+            int64_t removed = 0;
+            for (size_t i = 1; i < cmd.size(); ++i) {
+                if (storage_.del(cmd[i]))
+                    ++removed;
+            }
+            response = protocol::RespResponse::integer(removed);
         }
 
         else {
@@ -141,8 +155,6 @@ bool Connection::process_buffer() {
 =============================== */
 
 bool Connection::handle_write() {
-
-    std::cout<<"write called"<<std::endl;
 
     if (write_buffer_.empty())
         return true;

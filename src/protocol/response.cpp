@@ -25,4 +25,8 @@ std::string RespResponse::null() {
     return "$-1\r\n";
 }
 
+std::string RespResponse::integer(int64_t value) {
+    return ":" + std::to_string(value) + "\r\n";
+}
+
 }

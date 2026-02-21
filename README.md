@@ -36,14 +36,29 @@ Binary: `build/mini_redis` (with CMake) or `./mini_redis` (with script fallback)
 
 ```bash
 ./build/mini_redis
-
-in mac
-printf '*1\r\n$4\r\nPING\r\n' | nc localhost 6379
 ```
 
-Server listens on **port 6379**. AOF is enabled and writes to `aof.log` in the current directory.
+Server listens on **port 6379** (configurable via `config/server.conf`). AOF is enabled and writes to `aof.log` by default.
 
-**Example with `redis-cli`:**
+**Configuration:**
+
+Edit `config/server.conf` to change:
+- `port` — server port (default: 6379)
+- `aof_file` — AOF log path (default: aof.log)
+- `shards` — number of storage shards (default: 64)
+
+**Testing:**
+
+**Option 1: Test script (easiest)**
+```bash
+./scripts/test.sh PING
+./scripts/test.sh SET foo bar
+./scripts/test.sh GET foo
+./scripts/test.sh SETEX key 10 value
+./scripts/test.sh DEL foo
+```
+
+**Option 2: redis-cli**
 
 ```bash
 redis-cli -p 6379 SET foo bar
@@ -57,7 +72,7 @@ redis-cli -p 6379 DEL foo
 ```
 ├── CMakeLists.txt
 ├── config/
-│   └── server.yml
+│   └── server.conf      # server configuration
 ├── include/
 │   ├── common/       # types, status, hash, time
 │   ├── concurrency/  # thread_pool, rw_lock, spin_lock
@@ -71,7 +86,7 @@ redis-cli -p 6379 DEL foo
 │   ├── unit/         # test_storage, test_ttl, test_parser
 │   ├── integration/  # test_persistence, test_server
 │   └── stress/       # benchmark
-└── scripts/          # build.sh, run_server.sh, benchmark.sh, cleanup.sh
+└── scripts/          # build.sh, test.sh, run_server.sh, benchmark.sh, cleanup.sh
 ```
 
 ## License
