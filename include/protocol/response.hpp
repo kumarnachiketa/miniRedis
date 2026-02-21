@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 
 namespace protocol {
 
@@ -10,6 +11,7 @@ public:
     static std::string bulk(const std::string&);
     static std::string null();
     static std::string integer(int64_t value);
+    static std::string array(const std::vector<std::string>& elements);
 };
 
 }

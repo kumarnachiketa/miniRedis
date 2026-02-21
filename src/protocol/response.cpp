@@ -29,4 +29,11 @@ std::string RespResponse::integer(int64_t value) {
     return ":" + std::to_string(value) + "\r\n";
 }
 
+std::string RespResponse::array(const std::vector<std::string>& elements) {
+    std::string r = "*" + std::to_string(elements.size()) + "\r\n";
+    for (const auto& s : elements)
+        r += bulk(s);
+    return r;
+}
+
 }

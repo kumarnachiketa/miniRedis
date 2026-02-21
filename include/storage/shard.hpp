@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <shared_mutex>
 #include <string>
+#include <vector>
 #include <cstdint>
 #include "storage/value.hpp"
 
@@ -18,6 +19,7 @@ public:
     bool exists(const std::string& key, uint64_t now);
     bool set_expire(const std::string& key, uint64_t expire_at, uint64_t now);
     int64_t ttl(const std::string& key, uint64_t now);
+    void keys(uint64_t now, std::vector<std::string>& out);
 
 private:
     Map map_;

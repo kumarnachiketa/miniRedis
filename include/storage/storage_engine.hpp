@@ -19,7 +19,8 @@ public:
     bool exists(const std::string& key);
     bool expire(const std::string& key, uint64_t ttl_seconds);
     int64_t ttl(const std::string& key);
-    void enable_aof(const std::string& filename);
+    std::vector<std::string> keys(const std::string& pattern);
+    void enable_aof(const std::string& filename, bool flush_each_write = true);
 
 private:
     std::vector<Shard> shards_;

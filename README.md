@@ -4,7 +4,7 @@ A minimal Redis-like in-memory key-value store in C++. TCP server on port 6379 w
 
 ## Features
 
-- **Commands:** `PING`, `GET`, `SET`, `SETEX`, `DEL`, `EXISTS`, `EXPIRE`, `TTL`
+- **Commands:** `PING`, `GET`, `SET`, `SETEX`, `DEL`, `EXISTS`, `EXPIRE`, `TTL`, `KEYS pattern`
 - **Sharded storage** — 64 shards by default for concurrent access with per-shard locking
 - **TTL** — expiration via `SETEX` and background TTL cleanup
 - **Persistence** — optional append-only file (AOF) for durability
@@ -30,7 +30,7 @@ cmake --build build
 ./scripts/build.sh
 ```
 
-Binary: `build/mini_redis` (with CMake) or `./mini_redis` (with script fallback).
+Binaries: `build/mini_redis` (server), `build/mini_redis_cli` (CLI), `build/benchmark_client` (benchmark). The server uses **kqueue** + **thread pool** (commands run on workers); set `aof_fsync=no` for maximum throughput.
 
 ## Run
 
@@ -46,10 +46,35 @@ Edit `config/server.conf` to change:
 - `port` — server port (default: 6379)
 - `aof_file` — AOF log path (default: aof.log)
 - `shards` — number of storage shards (default: 64)
+- `aof_fsync` — `every_write` or `no` (higher throughput, less durable)
+- `worker_threads` — thread pool size for command execution (default: 4)
+
+**Benchmark:**
+
+**C++ benchmark (recommended - much faster):**
+```bash
+./scripts/benchmark_cpp.sh 10000 4
+# or: ./build/benchmark_client 10000 4
+```
+Runs 10,000 requests across 4 threads. Make sure server is running first.
+
+**Shell benchmark (slower, for quick tests):**
+```bash
+./scripts/benchmark.sh 1000
+```
+Note: The C++ benchmark is 100x+ faster because it reuses connections and uses multiple threads.
+
+**CLI (interactive):**
+
+```bash
+./build/mini_redis_cli              # connect to 127.0.0.1:6379
+./build/mini_redis_cli host port    # connect to host:port
+```
+Type commands (e.g. `PING`, `SET foo bar`, `GET foo`, `KEYS *`). Use `quit` or empty line to exit.
 
 **Testing:**
 
-**Option 1: Test script (easiest)**
+**Option 1: Test script**
 ```bash
 ./scripts/test.sh PING
 ./scripts/test.sh SET foo bar

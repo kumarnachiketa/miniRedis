@@ -7,3 +7,4 @@ SET a 10
 SETEX b 3 hello
 SET key value
 SETEX x 10 hello
+SETEX x 10 hello

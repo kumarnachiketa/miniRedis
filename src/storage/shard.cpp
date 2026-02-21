@@ -64,4 +64,12 @@ int64_t Shard::ttl(const std::string& key, uint64_t now) {
     return rem > 0 ? rem : 0;
 }
 
+void Shard::keys(uint64_t now, std::vector<std::string>& out) {
+    std::shared_lock lock(mutex_);
+    for (const auto& [k, v] : map_) {
+        if (!v.is_expired(now))
+            out.push_back(k);
+    }
+}
+
 } // namespace mini_redis

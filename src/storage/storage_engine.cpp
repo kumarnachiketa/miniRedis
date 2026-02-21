@@ -2,8 +2,45 @@
 #include "persistence/aof_reader.hpp"
 #include <functional>
 #include <chrono>
+#include <algorithm>
 
 namespace mini_redis {
+
+namespace {
+
+// Simple glob: * = any chars, ? = one char (Redis-style)
+bool match_pattern(const std::string& pattern, const std::string& key) {
+    size_t pi = 0, ki = 0;
+    size_t star_pi = std::string::npos, star_ki = std::string::npos;
+    while (ki < key.size()) {
+        if (pi < pattern.size() && (pattern[pi] == '*' || pattern[pi] == '?')) {
+            if (pattern[pi] == '*') {
+                star_pi = pi;
+                star_ki = ki;
+                ++pi;
+                continue;
+            }
+            ++pi;
+            ++ki;
+            continue;
+        }
+        if (pi < pattern.size() && pattern[pi] == key[ki]) {
+            ++pi;
+            ++ki;
+            continue;
+        }
+        if (star_pi != std::string::npos) {
+            pi = star_pi + 1;
+            ki = ++star_ki;
+            continue;
+        }
+        return false;
+    }
+    while (pi < pattern.size() && pattern[pi] == '*') ++pi;
+    return pi == pattern.size();
+}
+
+} // namespace
 
 StorageEngine::StorageEngine(size_t shard_count)
     : shards_(shard_count) {}
@@ -76,12 +113,26 @@ int64_t StorageEngine::ttl(const std::string& key) {
     return shard_for(key).ttl(key, now_seconds());
 }
 
+std::vector<std::string> StorageEngine::keys(const std::string& pattern) {
+    std::vector<std::string> out;
+    uint64_t now = now_seconds();
+    for (auto& shard : shards_)
+        shard.keys(now, out);
+    if (pattern != "*") {
+        std::vector<std::string> filtered;
+        for (const auto& k : out) {
+            if (match_pattern(pattern, k))
+                filtered.push_back(k);
+        }
+        return filtered;
+    }
+    return out;
+}
 
-void StorageEngine::enable_aof(const std::string& filename) {
+void StorageEngine::enable_aof(const std::string& filename, bool flush_each_write) {
     AOFReader reader(filename);
     reader.replay(*this);
-
-    aof_writer_ = std::make_unique<AOFWriter>(filename);
+    aof_writer_ = std::make_unique<AOFWriter>(filename, flush_each_write);
 }
 
 } // namespace mini_redis

@@ -10,6 +10,7 @@
 #   ./scripts/test.sh EXISTS key
 #   ./scripts/test.sh EXPIRE key 30
 #   ./scripts/test.sh TTL key
+#   ./scripts/test.sh KEYS '*'
 
 PORT=${REDIS_PORT:-6379}
 HOST=${REDIS_HOST:-localhost}
@@ -42,6 +43,7 @@ if [ $# -eq 0 ]; then
     echo "  $0 EXISTS key"
     echo "  $0 EXPIRE key 30"
     echo "  $0 TTL key"
+    echo "  $0 KEYS '*'"
     exit 1
 fi
 
