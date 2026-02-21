@@ -30,4 +30,10 @@ void AOFWriter::append_del(const std::string& key) {
     file_.flush();
 }
 
+void AOFWriter::append_expire(const std::string& key, uint64_t ttl_seconds) {
+    std::lock_guard lock(mutex_);
+    file_ << "EXPIRE " << key << " " << ttl_seconds << "\n";
+    file_.flush();
+}
+
 } // namespace mini_redis

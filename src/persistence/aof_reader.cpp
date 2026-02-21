@@ -37,6 +37,12 @@ void AOFReader::replay(StorageEngine& engine) {
             iss >> key;
             engine.del(key);
         }
+        else if (cmd == "EXPIRE") {
+            std::string key;
+            uint64_t ttl;
+            iss >> key >> ttl;
+            engine.expire(key, ttl);
+        }
     }
 }
 

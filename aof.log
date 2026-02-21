@@ -6,3 +6,4 @@ SETEX b 3 hello[D[D[D[D[D[D
 SET a 10
 SETEX b 3 hello
 SET key value
+SETEX x 10 hello

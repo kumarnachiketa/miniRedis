@@ -7,6 +7,9 @@
 #   ./scripts/test.sh GET foo
 #   ./scripts/test.sh SETEX key 10 value
 #   ./scripts/test.sh DEL foo
+#   ./scripts/test.sh EXISTS key
+#   ./scripts/test.sh EXPIRE key 30
+#   ./scripts/test.sh TTL key
 
 PORT=${REDIS_PORT:-6379}
 HOST=${REDIS_HOST:-localhost}
@@ -36,6 +39,9 @@ if [ $# -eq 0 ]; then
     echo "  $0 GET foo"
     echo "  $0 SETEX key 10 value"
     echo "  $0 DEL foo"
+    echo "  $0 EXISTS key"
+    echo "  $0 EXPIRE key 30"
+    echo "  $0 TTL key"
     exit 1
 fi
 

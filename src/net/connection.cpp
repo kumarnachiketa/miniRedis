@@ -130,6 +130,36 @@ bool Connection::process_buffer() {
             response = protocol::RespResponse::integer(removed);
         }
 
+        /* ---------- EXISTS ---------- */
+        else if (op == "EXISTS" && cmd.size() >= 2) {
+            int64_t count = 0;
+            for (size_t i = 1; i < cmd.size(); ++i) {
+                if (storage_.exists(cmd[i])) ++count;
+            }
+            response = protocol::RespResponse::integer(count);
+        }
+
+        /* ---------- EXPIRE ---------- */
+        else if (op == "EXPIRE" && cmd.size() >= 3) {
+            uint64_t ttl = 0;
+            bool valid = true;
+            try {
+                ttl = static_cast<uint64_t>(std::stoull(cmd[2]));
+            } catch (...) {
+                valid = false;
+            }
+            if (!valid)
+                response = protocol::RespResponse::error("invalid expire time");
+            else
+                response = protocol::RespResponse::integer(storage_.expire(cmd[1], ttl) ? 1 : 0);
+        }
+
+        /* ---------- TTL ---------- */
+        else if (op == "TTL" && cmd.size() >= 2) {
+            int64_t t = storage_.ttl(cmd[1]);
+            response = protocol::RespResponse::integer(t);
+        }
+
         else {
             response =
                 protocol::RespResponse::error(

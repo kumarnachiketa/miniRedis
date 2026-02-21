@@ -59,7 +59,22 @@ bool StorageEngine::del(const std::string& key) {
     return res;
 }
 
+bool StorageEngine::exists(const std::string& key) {
+    return shard_for(key).exists(key, now_seconds());
+}
 
+bool StorageEngine::expire(const std::string& key, uint64_t ttl_seconds) {
+    uint64_t expire_at = now_seconds() + ttl_seconds;
+    bool res = shard_for(key).set_expire(key, expire_at, now_seconds());
+    if (res && aof_writer_) {
+        aof_writer_->append_expire(key, ttl_seconds);
+    }
+    return res;
+}
+
+int64_t StorageEngine::ttl(const std::string& key) {
+    return shard_for(key).ttl(key, now_seconds());
+}
 
 
 void StorageEngine::enable_aof(const std::string& filename) {

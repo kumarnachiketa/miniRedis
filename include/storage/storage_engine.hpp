@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <cstdint>
 #include "storage/shard.hpp"
 #include "persistence/aof_writer.hpp"
 
@@ -15,6 +16,9 @@ public:
     void set(const std::string& key, std::string value);
     void set_with_ttl(const std::string& key, std::string value, uint64_t ttl_seconds);
     bool del(const std::string& key);
+    bool exists(const std::string& key);
+    bool expire(const std::string& key, uint64_t ttl_seconds);
+    int64_t ttl(const std::string& key);
     void enable_aof(const std::string& filename);
 
 private:

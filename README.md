@@ -4,7 +4,7 @@ A minimal Redis-like in-memory key-value store in C++. TCP server on port 6379 w
 
 ## Features
 
-- **Commands:** `GET`, `SET`, `SETEX` (set with TTL), `DEL`
+- **Commands:** `PING`, `GET`, `SET`, `SETEX`, `DEL`, `EXISTS`, `EXPIRE`, `TTL`
 - **Sharded storage** — 64 shards by default for concurrent access with per-shard locking
 - **TTL** — expiration via `SETEX` and background TTL cleanup
 - **Persistence** — optional append-only file (AOF) for durability
