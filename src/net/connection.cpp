@@ -1,0 +1,179 @@
+#include "net/connection.hpp"
+
+#include <unistd.h>
+#include <iostream>
+#include <errno.h>
+
+namespace net {
+
+/* ===============================
+   Constructor / Destructor
+=============================== */
+
+Connection::Connection(
+        int fd,
+        mini_redis::StorageEngine& storage)
+    : fd_(fd),
+      storage_(storage) {}
+
+Connection::~Connection() {
+    if (fd_ >= 0)
+        close(fd_);
+}
+
+int Connection::fd() const {
+    return fd_;
+}
+
+
+/* ===============================
+   READ HANDLER
+=============================== */
+
+bool Connection::handle_read() {
+
+    char buffer[4096];
+
+    ssize_t n = read(fd_, buffer, sizeof(buffer));
+
+    if (n > 0) {
+        read_buffer_.append(buffer, n);
+
+        std::cout << "Read "
+                  << n
+                  << " bytes\n";
+
+        process_buffer();
+        for (char c : read_buffer_) {
+            if (c == '\r') std::cout << "\\r";
+            else if (c == '\n') std::cout << "\\n\n";
+            else std::cout << c;
+        }
+
+        return true;
+    }
+
+    if (n == 0) {
+        std::cout << "Client disconnected\n";
+        return false;
+    }
+
+    if (errno == EWOULDBLOCK ||
+        errno == EAGAIN)
+        return true;
+
+    perror("read");
+    return false;
+}
+
+
+/* ===============================
+   COMMAND PROCESSING
+=============================== */
+
+bool Connection::process_buffer() {
+
+    size_t pos = 0;
+
+    while (true) {
+
+        std::vector<std::string> cmd;
+
+        if (!parser_.parse_array(read_buffer_, pos, cmd)) {
+            std::cout<<"line 77"<<std::endl;
+            break;   // need more data
+        }
+
+        if (cmd.empty())
+            continue;
+
+        std::string response;
+        const std::string& op = cmd[0];
+
+        /* ---------- PING ---------- */
+        if (op == "PING") {
+            response =
+                protocol::RespResponse::bulk("PONG");
+        }
+
+        /* ---------- SET ---------- */
+        else if (op == "SET" && cmd.size() >= 3) {
+            storage_.set(cmd[1], cmd[2]);
+            response =
+                protocol::RespResponse::ok();
+        }
+
+        /* ---------- GET ---------- */
+        else if (op == "GET" && cmd.size() >= 2) {
+
+            std::string value;
+
+            if (!storage_.get(cmd[1], value))
+                response =
+                    protocol::RespResponse::null();
+            else
+                response =
+                    protocol::RespResponse::bulk(value);
+        }
+
+        else {
+            response =
+                protocol::RespResponse::error(
+                    "unknown command");
+        }
+
+        write_buffer_ += response;
+    }
+
+    // remove processed bytes
+    read_buffer_.erase(0, pos);
+
+    if (!write_buffer_.empty())
+        handle_write();
+
+    return true;
+}
+
+
+
+/* ===============================
+   WRITE HANDLER
+=============================== */
+
+bool Connection::handle_write() {
+
+    std::cout<<"write called"<<std::endl;
+
+    if (write_buffer_.empty())
+        return true;
+
+    ssize_t n =
+        write(fd_,
+              write_buffer_.data(),
+              write_buffer_.size());
+
+    if (n < 0) {
+
+        if (errno == EWOULDBLOCK ||
+            errno == EAGAIN)
+            return true;
+
+        perror("write");
+        return false;
+    }
+
+    write_buffer_.erase(0, n);
+
+    return true;
+}
+
+
+/* ===============================
+   WRITE INTEREST
+=============================== */
+
+bool Connection::wants_write() const {
+    return !write_buffer_.empty();
+}
+
+} // namespace net
