@@ -1,6 +1,5 @@
 #include "net/server.hpp"
 #include "net/connection.hpp"
-#include "protocol/executor.hpp"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -27,10 +26,9 @@ void set_nonblocking(int fd) {
 
 } // namespace
 
-Server::Server(int port, mini_redis::StorageEngine& storage, size_t worker_threads)
+Server::Server(int port, mini_redis::StorageEngine& storage)
     : port_(port),
       storage_(storage),
-      pool_(worker_threads),
       listen_fd_(-1),
       kq_(-1) {}
 
@@ -77,44 +75,8 @@ bool Server::start() {
         return false;
     }
 
-    std::cout << "miniRedis listening on port " << port_ << " (kqueue + thread pool)\n";
+    std::cout << "miniRedis listening on port " << port_ << " (kqueue)\n";
     return true;
-}
-
-void Server::submit_command(int fd, std::vector<std::string> cmd) {
-    mini_redis::StorageEngine* storage = &storage_;
-    pool_.enqueue([this, fd, cmd = std::move(cmd), storage]() {
-        std::string response = mini_redis::protocol::execute_command(*storage, cmd);
-        push_pending_response(fd, std::move(response));
-    });
-}
-
-void Server::push_pending_response(int fd, std::string response) {
-    std::lock_guard lock(response_mutex_);
-    response_queue_.emplace(fd, std::move(response));
-}
-
-void Server::drain_response_queue(std::vector<struct kevent>& changelist) {
-    std::queue<std::pair<int, std::string>> batch;
-    {
-        std::lock_guard lock(response_mutex_);
-        batch.swap(response_queue_);
-    }
-    while (!batch.empty()) {
-        int fd = batch.front().first;
-        std::string response = std::move(batch.front().second);
-        batch.pop();
-        auto it = connections_.find(fd);
-        if (it != connections_.end()) {
-            it->second->add_pending_response(std::move(response));
-            if (write_interest_.count(fd) == 0) {
-                write_interest_.insert(fd);
-                struct kevent ev;
-                EV_SET(&ev, fd, EVFILT_WRITE, EV_ADD, 0, 0, nullptr);
-                changelist.push_back(ev);
-            }
-        }
-    }
 }
 
 void Server::accept_client() {
@@ -127,11 +89,7 @@ void Server::accept_client() {
         return;
     }
     set_nonblocking(client_fd);
-
-    auto submit_fn = [this](int fd, std::vector<std::string> cmd) {
-        submit_command(fd, std::move(cmd));
-    };
-    connections_.emplace(client_fd, std::make_unique<Connection>(client_fd, submit_fn));
+    connections_.emplace(client_fd, std::make_unique<Connection>(client_fd, storage_));
 
     struct kevent ev;
     EV_SET(&ev, client_fd, EVFILT_READ, EV_ADD, 0, 0, nullptr);
@@ -145,15 +103,7 @@ void Server::run() {
     changelist.reserve(MAX_EVENTS);
 
     while (true) {
-        changelist.clear();
-        drain_response_queue(changelist);
-
-        int n = kevent(kq_,
-                      changelist.empty() ? nullptr : changelist.data(),
-                      static_cast<int>(changelist.size()),
-                      events.data(),
-                      static_cast<int>(events.size()),
-                      nullptr);
+        int n = kevent(kq_, nullptr, 0, events.data(), static_cast<int>(events.size()), nullptr);
         if (n < 0) {
             if (errno == EINTR) continue;
             perror("kevent");
@@ -200,7 +150,6 @@ void Server::run() {
 
         if (!changelist.empty()) {
             kevent(kq_, changelist.data(), static_cast<int>(changelist.size()), nullptr, 0, nullptr);
-            changelist.clear();
         }
 
         for (int fd : dead) {

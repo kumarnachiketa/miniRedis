@@ -2,8 +2,6 @@
 
 #include <string>
 #include <vector>
-#include <functional>
-#include <mutex>
 
 #include "protocol/parser.hpp"
 #include "protocol/response.hpp"
@@ -13,31 +11,32 @@ namespace net {
 
 class Connection {
 public:
-    using SubmitFn = std::function<void(int fd, std::vector<std::string> cmd)>;
-
-    Connection(int fd, SubmitFn submit_fn);
+    Connection(
+        int fd,
+        mini_redis::StorageEngine& storage);
 
     ~Connection();
 
     int fd() const;
 
+    // Event loop calls these
     bool handle_read();
     bool handle_write();
     bool wants_write() const;
 
-    // Called from main thread when worker pushes a response
-    void add_pending_response(std::string response);
-
 private:
     bool process_buffer();
 
+private:
     int fd_;
-    SubmitFn submit_fn_;
+    mini_redis::StorageEngine& storage_;
 
     protocol::RespParser parser_;
+
+    // incoming data
     std::string read_buffer_;
 
-    mutable std::mutex write_mutex_;
+    // outgoing data
     std::string write_buffer_;
 };
 

@@ -11,7 +11,7 @@ int main() {
     mini_redis::StorageEngine engine(config.shard_count);
     engine.enable_aof(config.aof_file, config.aof_fsync_every_write);
 
-    net::Server server(config.port, engine, config.worker_threads);
+    net::Server server(config.port, engine);
     if (!server.start()) {
         std::cerr << "Failed to start server\n";
         return 1;

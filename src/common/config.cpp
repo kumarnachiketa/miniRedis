@@ -33,11 +33,6 @@ void set_value(ServerConfig& c, const std::string& key, const std::string& value
     } else if (key == "aof_fsync") {
         std::string v = value;
         if (v == "no" || v == "0" || v == "false") c.aof_fsync_every_write = false;
-    } else if (key == "worker_threads") {
-        try {
-            size_t n = static_cast<size_t>(std::stoull(value));
-            if (n > 0 && n <= 64) c.worker_threads = n;
-        } catch (...) {}
     }
 }
 

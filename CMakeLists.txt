@@ -18,7 +18,6 @@ set(SOURCES
   src/persistence/aof_writer.cpp
   src/persistence/persistence.cpp
   src/protocol/command.cpp
-  src/protocol/executor.cpp
   src/protocol/parser.cpp
   src/protocol/response.cpp
   src/storage/shard.cpp
@@ -33,6 +32,3 @@ target_link_libraries(mini_redis PRIVATE pthread)
 # Benchmark client
 add_executable(benchmark_client tests/stress/benchmark.cpp)
 target_link_libraries(benchmark_client PRIVATE pthread)
-
-# CLI client
-add_executable(mini_redis_cli src/cli/main.cpp)

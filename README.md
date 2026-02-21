@@ -30,7 +30,7 @@ cmake --build build
 ./scripts/build.sh
 ```
 
-Binaries: `build/mini_redis` (server), `build/mini_redis_cli` (CLI), `build/benchmark_client` (benchmark). The server uses **kqueue** + **thread pool** (commands run on workers); set `aof_fsync=no` for maximum throughput.
+Binary: `build/mini_redis` (with CMake) or `./mini_redis` (with script fallback). The server uses a **kqueue** event loop and non-blocking I/O for 1000+ req/s; set `aof_fsync=no` in config for maximum throughput.
 
 ## Run
 
@@ -46,8 +46,7 @@ Edit `config/server.conf` to change:
 - `port` — server port (default: 6379)
 - `aof_file` — AOF log path (default: aof.log)
 - `shards` — number of storage shards (default: 64)
-- `aof_fsync` — `every_write` or `no` (higher throughput, less durable)
-- `worker_threads` — thread pool size for command execution (default: 4)
+- `aof_fsync` — `every_write` (default) or `no` (higher throughput, less durable)
 
 **Benchmark:**
 
@@ -64,17 +63,9 @@ Runs 10,000 requests across 4 threads. Make sure server is running first.
 ```
 Note: The C++ benchmark is 100x+ faster because it reuses connections and uses multiple threads.
 
-**CLI (interactive):**
-
-```bash
-./build/mini_redis_cli              # connect to 127.0.0.1:6379
-./build/mini_redis_cli host port    # connect to host:port
-```
-Type commands (e.g. `PING`, `SET foo bar`, `GET foo`, `KEYS *`). Use `quit` or empty line to exit.
-
 **Testing:**
 
-**Option 1: Test script**
+**Option 1: Test script (easiest)**
 ```bash
 ./scripts/test.sh PING
 ./scripts/test.sh SET foo bar
